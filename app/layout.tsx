@@ -43,6 +43,7 @@ export default function RootLayout({
         <meta name="twitter:image" content="/favicon.ico" />
       </head>
       <body className={inter.className}>
+        <div className="absolute left-1/2 aspect-square w-[350%] -translate-x-1/2 overflow-hidden md:w-[190%] lg:w-[190%] xl:w-[190%] 2xl:mx-auto" style={{ backgroundImage: 'url(/img/background/gradient-optimized.svg)', backgroundSize: 'cover', backgroundRepeat: 'no-repeat', backgroundPosition: 'center top', mask: 'linear-gradient(transparent 0%, black 5%, black 100%)', backfaceVisibility: 'hidden', perspective: '1000px', willChange: 'transform' }} />
         {children}
         <Toaster />
       </body>
