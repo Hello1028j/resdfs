@@ -4,7 +4,6 @@ import fs from 'fs-extra'
 import path from 'path'
 import { promisify } from 'util'
 
-const writeFile = promisify(fs.writeFile)
 const unlink = promisify(fs.unlink)
 
 // Helper function to format file size
@@ -82,7 +81,7 @@ export async function POST(request: NextRequest): Promise<Response> {
             'Cache-Control': 'no-cache'
           }
         })
-      } catch (err: unknown) {
+      } catch {
         return NextResponse.json(
           { error: 'Failed to download TikTok video' },
           { status: 500 }
@@ -165,9 +164,9 @@ export async function POST(request: NextRequest): Promise<Response> {
         { status: 400 }
       )
     }
-  } catch (err: any) {
+  } catch {
     return NextResponse.json(
-      { error: err?.message || 'Internal server error' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

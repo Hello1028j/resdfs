@@ -130,19 +130,9 @@ export async function POST(request: NextRequest) {
     console.log('Estimated sizes - Video:', estimatedVideoSize, 'Audio:', estimatedAudioSize)
 
     return NextResponse.json(videoInfo)
-  } catch (error) {
-    console.error('Info error:', error)
-    
-    // Return more specific error messages
-    if (error instanceof Error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      )
-    }
-    
+  } catch {
     return NextResponse.json(
-      { error: 'Failed to get video information' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

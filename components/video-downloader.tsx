@@ -3,20 +3,13 @@
 import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardTitle } from '@/components/ui/card'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-import { Download, Copy, Play, Music, Loader2, Clock } from 'lucide-react'
+import { Download, Copy, Play, Music, Clock } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem
-} from '@/components/ui/dropdown-menu'
 
 interface VideoInfo {
   title: string
@@ -57,9 +50,6 @@ export function VideoDownloader() {
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
-  const [downloadProgress, setDownloadProgress] = useState(0)
-  const [downloadSpeed, setDownloadSpeed] = useState('')
-  const [downloadETA, setDownloadETA] = useState('')
   const [error, setError] = useState('')
   const [recentDownloads, setRecentDownloads] = useState<DownloadHistoryItem[]>([])
   const [showHistory, setShowHistory] = useState(false)
@@ -223,12 +213,6 @@ export function VideoDownloader() {
     if (!videoInfo) return
 
     setIsDownloading(true)
-    setDownloadProgress(0)
-    setDownloadSpeed('')
-    setDownloadETA('')
-
-    // Estimate file size based on format
-    const estimatedSize = getEstimatedSizeNumber()
 
     // Show Sonner download toast
     toast("Download in progress", {
@@ -241,23 +225,6 @@ export function VideoDownloader() {
       duration: Infinity,
       id: "download-toast",
     })
-
-    // Simulate progress updates (no longer update toast)
-    const progressInterval = setInterval(() => {
-      setDownloadProgress(prevProgress => {
-        if (prevProgress < 90) {
-          const increment = Math.random() * 10 + 5 // 5-15% increments
-          const newProgress = Math.min(prevProgress + increment, 90)
-          // Calculate simulated speed and downloaded MB
-          const elapsed = 1 // Rough estimate for simulation
-          const downloadedMB = (newProgress / 100) * estimatedSize
-          const speed = (downloadedMB / elapsed).toFixed(1)
-          setDownloadSpeed(`${speed} MB/s`)
-          return newProgress
-        }
-        return prevProgress
-      })
-    }, 500)
 
     try {
       const response = await fetch('/api/download', {
@@ -277,9 +244,6 @@ export function VideoDownloader() {
         throw new Error(errorData.error || 'Download failed')
       }
 
-      // Complete the progress
-      setDownloadProgress(100)
-      clearInterval(progressInterval)
       toast("Download finished", {
         description: (
           <div className="flex items-center gap-2 pr-3 w-full overflow-hidden">
@@ -310,7 +274,6 @@ export function VideoDownloader() {
       document.body.removeChild(a)
       window.URL.revokeObjectURL(downloadUrl)
     } catch (err: any) {
-      clearInterval(progressInterval)
       toast("Download failed", {
         description: (
           <div className="flex items-center gap-2 pr-3 w-full overflow-hidden">
@@ -323,9 +286,6 @@ export function VideoDownloader() {
       })
     } finally {
       setIsDownloading(false)
-      setDownloadProgress(0)
-      setDownloadSpeed('')
-      setDownloadETA('')
     }
   }
 
