@@ -19,6 +19,16 @@ function isTiktokUrl(url: string): boolean {
   return /tiktok\.com\//i.test(url) || /vm\.tiktok\.com\//i.test(url)
 }
 
+async function streamToFile(stream: NodeJS.ReadableStream, filePath: string) {
+  return new Promise<void>((resolve, reject) => {
+    const writeStream = fs.createWriteStream(filePath)
+    stream.pipe(writeStream)
+    writeStream.on('finish', resolve)
+    writeStream.on('error', reject)
+    stream.on('error', reject)
+  })
+}
+
 export async function POST(request: NextRequest): Promise<Response> {
   try {
     const body = await request.json();
@@ -109,13 +119,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         quality: quality || 'highest',
         filter: 'audioandvideo'
       })
-      const writeStream = fs.createWriteStream(videoPath)
-      await new Promise<void>((resolve, reject) => {
-        videoStream.pipe(writeStream)
-        writeStream.on('finish', resolve)
-        writeStream.on('error', reject)
-        videoStream.on('error', reject)
-      })
+      await streamToFile(videoStream, videoPath)
       const fileBuffer = await fs.readFile(videoPath)
       await unlink(videoPath)
       const fileSize = fileBuffer.length
@@ -137,13 +141,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         quality: quality || 'highestaudio',
         filter: 'audioonly'
       })
-      const writeStream = fs.createWriteStream(audioPath)
-      await new Promise<void>((resolve, reject) => {
-        audioStream.pipe(writeStream)
-        writeStream.on('finish', resolve)
-        writeStream.on('error', reject)
-        audioStream.on('error', reject)
-      })
+      await streamToFile(audioStream, audioPath)
       const fileBuffer = await fs.readFile(audioPath)
       await unlink(audioPath)
       const fileSize = fileBuffer.length
