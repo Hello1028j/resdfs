@@ -20,7 +20,7 @@ function isTiktokUrl(url: string): boolean {
   return /tiktok\.com\//i.test(url) || /vm\.tiktok\.com\//i.test(url)
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<Response> {
   try {
     const body = await request.json();
     const url = body.url;
@@ -97,166 +97,77 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('Starting download for:', url, 'format:', format)
-
     // Get video info
     const info = await ytdl.getInfo(url)
     const videoTitle = info.videoDetails.title.replace(/[^\w\s-]/g, '')
-    const videoId = info.videoDetails.videoId
-
-    console.log('Video title:', videoTitle)
-
-    // Create temp directory
     const tempDir = path.join(process.cwd(), 'temp')
     await fs.ensureDir(tempDir)
 
     if (format === 'mp4') {
       // Download as MP4
       const videoPath = path.join(tempDir, `${videoTitle}.mp4`)
-      
       const videoStream = ytdl(url, {
         quality: quality || 'highest',
         filter: 'audioandvideo'
       })
-
       const writeStream = fs.createWriteStream(videoPath)
-      
-      return new Promise((resolve, reject) => {
-        let downloadedBytes = 0
-        let startTime = Date.now()
-        
-        videoStream.on('progress', (chunkLength, downloaded, total) => {
-          downloadedBytes = downloaded
-          const percentage = Math.round((downloaded / total) * 100)
-          const downloadedMB = (downloaded / (1024 * 1024)).toFixed(1)
-          const totalMB = (total / (1024 * 1024)).toFixed(1)
-          const elapsed = (Date.now() - startTime) / 1000
-          const speed = elapsed > 0 ? (downloaded / (1024 * 1024) / elapsed).toFixed(1) : '0'
-          
-          console.log(`Progress: ${percentage}% - ${downloadedMB}MB/${totalMB}MB - ${speed}MB/s`)
-        })
-
+      await new Promise<void>((resolve, reject) => {
         videoStream.pipe(writeStream)
-        
-        writeStream.on('finish', async () => {
-          try {
-            console.log('Video download completed, reading file...')
-            const fileBuffer = await fs.readFile(videoPath)
-            await unlink(videoPath) // Clean up temp file
-            
-            const fileSize = fileBuffer.length
-            const formattedSize = formatFileSize(fileSize)
-            
-            console.log('Sending video response, size:', formattedSize)
-            
-            const response = new NextResponse(fileBuffer, {
-              status: 200,
-              headers: {
-                'Content-Type': 'video/mp4',
-                'Content-Disposition': `attachment; filename="${videoTitle}.mp4"`,
-                'Content-Length': fileSize.toString(),
-                'X-File-Size': formattedSize,
-                'Cache-Control': 'no-cache'
-              }
-            })
-            
-            resolve(response)
-          } catch (error) {
-            console.error('Error processing video:', error)
-            reject(NextResponse.json(
-              { error: 'Failed to process video' },
-              { status: 500 }
-            ))
-          }
-        })
-        
-        writeStream.on('error', (error) => {
-          console.error('Error writing video file:', error)
-          reject(NextResponse.json(
-            { error: 'Failed to download video' },
-            { status: 500 }
-          ))
-        })
+        writeStream.on('finish', resolve)
+        writeStream.on('error', reject)
+        videoStream.on('error', reject)
+      })
+      const fileBuffer = await fs.readFile(videoPath)
+      await unlink(videoPath)
+      const fileSize = fileBuffer.length
+      const formattedSize = formatFileSize(fileSize)
+      return new NextResponse(fileBuffer, {
+        status: 200,
+        headers: {
+          'Content-Type': 'video/mp4',
+          'Content-Disposition': `attachment; filename="${videoTitle}.mp4"`,
+          'Content-Length': fileSize.toString(),
+          'X-File-Size': formattedSize,
+          'Cache-Control': 'no-cache'
+        }
       })
     } else if (format === 'mp3') {
       // Download as MP3 (audio only)
       const audioPath = path.join(tempDir, `${videoTitle}.mp3`)
-      
       const audioStream = ytdl(url, {
         quality: quality || 'highestaudio',
         filter: 'audioonly'
       })
-
       const writeStream = fs.createWriteStream(audioPath)
-      
-      return new Promise((resolve, reject) => {
-        let downloadedBytes = 0
-        let startTime = Date.now()
-        
-        audioStream.on('progress', (chunkLength, downloaded, total) => {
-          downloadedBytes = downloaded
-          const percentage = Math.round((downloaded / total) * 100)
-          const downloadedMB = (downloaded / (1024 * 1024)).toFixed(1)
-          const totalMB = (total / (1024 * 1024)).toFixed(1)
-          const elapsed = (Date.now() - startTime) / 1000
-          const speed = elapsed > 0 ? (downloaded / (1024 * 1024) / elapsed).toFixed(1) : '0'
-          
-          console.log(`Progress: ${percentage}% - ${downloadedMB}MB/${totalMB}MB - ${speed}MB/s`)
-        })
-
+      await new Promise<void>((resolve, reject) => {
         audioStream.pipe(writeStream)
-        
-        writeStream.on('finish', async () => {
-          try {
-            console.log('Audio download completed')
-            
-            const fileBuffer = await fs.readFile(audioPath)
-            await unlink(audioPath) // Clean up temp file
-            
-            const fileSize = fileBuffer.length
-            const formattedSize = formatFileSize(fileSize)
-            
-            console.log('Sending audio response, size:', formattedSize)
-            
-            const response = new NextResponse(fileBuffer, {
-              status: 200,
-              headers: {
-                'Content-Type': 'audio/mpeg',
-                'Content-Disposition': `attachment; filename="${videoTitle}.mp3"`,
-                'Content-Length': fileSize.toString(),
-                'X-File-Size': formattedSize,
-                'Cache-Control': 'no-cache'
-              }
-            })
-            
-            resolve(response)
-          } catch (error) {
-            console.error('Error processing audio:', error)
-            reject(NextResponse.json(
-              { error: 'Failed to process audio' },
-              { status: 500 }
-            ))
-          }
-        })
-        
-        writeStream.on('error', (error) => {
-          console.error('Error writing audio file:', error)
-          reject(NextResponse.json(
-            { error: 'Failed to download audio' },
-            { status: 500 }
-          ))
-        })
+        writeStream.on('finish', resolve)
+        writeStream.on('error', reject)
+        audioStream.on('error', reject)
+      })
+      const fileBuffer = await fs.readFile(audioPath)
+      await unlink(audioPath)
+      const fileSize = fileBuffer.length
+      const formattedSize = formatFileSize(fileSize)
+      return new NextResponse(fileBuffer, {
+        status: 200,
+        headers: {
+          'Content-Type': 'audio/mpeg',
+          'Content-Disposition': `attachment; filename="${videoTitle}.mp3"`,
+          'Content-Length': fileSize.toString(),
+          'X-File-Size': formattedSize,
+          'Cache-Control': 'no-cache'
+        }
       })
     } else {
       return NextResponse.json(
-        { error: 'Invalid format. Use "mp4" or "mp3"' },
+        { error: 'Unsupported format' },
         { status: 400 }
       )
     }
-  } catch (error) {
-    console.error('Download error:', error)
+  } catch (err: any) {
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: err?.message || 'Internal server error' },
       { status: 500 }
     )
   }
