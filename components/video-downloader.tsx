@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardTitle } from '@/components/ui/card'
@@ -15,11 +15,11 @@ interface VideoInfo {
   title: string
   duration: string
   thumbnail: string
-  formats: Array<{
+  formats: {
     quality: string
     size: string
     url: string
-  }>
+  }[]
 }
 
 interface DownloadHistoryItem {
@@ -61,76 +61,6 @@ export function VideoDownloader() {
     setRecentDownloads(getHistory())
   }, [])
 
-  function getEstimatedSize(): string {
-    if (!videoInfo || !videoInfo.formats || videoInfo.formats.length === 0) {
-      return format === 'mp4' ? '~168.5 MB' : '~45.0 MB'
-    }
-
-    // For MP4, look for video formats
-    if (format === 'mp4') {
-      const videoFormats = videoInfo.formats.filter(f => f.quality && !f.quality.includes('audio'))
-      if (videoFormats.length > 0) {
-        // Get the best quality format
-        const bestFormat = videoFormats.reduce((best, current) => {
-          const bestQuality = parseInt(best.quality.replace(/\D/g, '')) || 0
-          const currentQuality = parseInt(current.quality.replace(/\D/g, '')) || 0
-          return currentQuality > bestQuality ? current : best
-        })
-        return bestFormat.size || '~168.5 MB'
-      }
-    }
-
-    // For MP3, look for audio formats
-    if (format === 'mp3') {
-      const audioFormats = videoInfo.formats.filter(f => f.quality && f.quality.includes('audio'))
-      if (audioFormats.length > 0) {
-        const bestFormat = audioFormats[0] // Usually the first audio format is the best
-        return bestFormat.size || '~45.0 MB'
-      }
-    }
-
-    // Fallback to first available format
-    const firstFormat = videoInfo.formats[0]
-    return firstFormat.size || (format === 'mp4' ? '~168.5 MB' : '~45.0 MB')
-  }
-
-  function getEstimatedSizeNumber(): number {
-    if (!videoInfo || !videoInfo.formats || videoInfo.formats.length === 0) {
-      return format === 'mp4' ? 168.54 : 44.95
-    }
-
-    // For MP4, look for video formats
-    if (format === 'mp4') {
-      const videoFormats = videoInfo.formats.filter(f => f.quality && !f.quality.includes('audio'))
-      if (videoFormats.length > 0) {
-        // Get the best quality format
-        const bestFormat = videoFormats.reduce((best, current) => {
-          const bestQuality = parseInt(best.quality.replace(/\D/g, '')) || 0
-          const currentQuality = parseInt(current.quality.replace(/\D/g, '')) || 0
-          return currentQuality > bestQuality ? current : best
-        })
-        // Extract number from size string (e.g., "168.5 MB" -> 168.5)
-        const sizeMatch = bestFormat.size?.match(/(\d+\.?\d*)/)
-        return sizeMatch ? parseFloat(sizeMatch[1]) : 168.54
-      }
-    }
-
-    // For MP3, look for audio formats
-    if (format === 'mp3') {
-      const audioFormats = videoInfo.formats.filter(f => f.quality && f.quality.includes('audio'))
-      if (audioFormats.length > 0) {
-        const bestFormat = audioFormats[0]
-        const sizeMatch = bestFormat.size?.match(/(\d+\.?\d*)/)
-        return sizeMatch ? parseFloat(sizeMatch[1]) : 44.95
-      }
-    }
-
-    // Fallback to first available format
-    const firstFormat = videoInfo.formats[0]
-    const sizeMatch = firstFormat.size?.match(/(\d+\.?\d*)/)
-    return sizeMatch ? parseFloat(sizeMatch[1]) : (format === 'mp4' ? 168.54 : 44.95)
-  }
-
   function addToHistory(item: DownloadHistoryItem) {
     const updated = [item, ...getHistory().filter(i => i.url !== item.url || i.format !== item.format)]
       .slice(0, 10) // keep max 10
@@ -167,18 +97,7 @@ export function VideoDownloader() {
     }
   }
 
-  // Auto-fetch when URL changes (debounced)
-  useEffect(() => {
-    if (!url.trim()) return
-    
-    const timer = setTimeout(() => {
-      handleFetchInfo()
-    }, 1000) // Wait 1 second after user stops typing
-    
-    return () => clearTimeout(timer)
-  }, [url])
-
-  async function handleFetchInfo() {
+  const handleFetchInfo = useCallback(async () => {
     if (!url.trim()) {
       return
     }
@@ -201,13 +120,22 @@ export function VideoDownloader() {
 
       const data = await response.json()
       setVideoInfo(data)
-    } catch (err: any) {
-      setError(err.message)
-      toast.error(err.message)
+    } catch {
+      setError('Failed to fetch video info')
+      toast.error('Failed to fetch video info')
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [url])
+
+  // Auto-fetch when URL changes (debounced)
+  useEffect(() => {
+    if (!url.trim()) return
+    const timer = setTimeout(() => {
+      handleFetchInfo()
+    }, 1000)
+    return () => clearTimeout(timer)
+  }, [url, handleFetchInfo])
 
   async function handleDownload() {
     if (!videoInfo) return
@@ -273,12 +201,12 @@ export function VideoDownloader() {
       a.click()
       document.body.removeChild(a)
       window.URL.revokeObjectURL(downloadUrl)
-    } catch (err: any) {
+    } catch {
       toast("Download failed", {
         description: (
           <div className="flex items-center gap-2 pr-3 w-full overflow-hidden">
             <span className="w-2 h-2 bg-red-500 rounded-full" />
-            <span className="font-medium truncate whitespace-nowrap overflow-hidden flex-1 min-w-0 max-w-[220px]">{err.message}</span>
+            <span className="font-medium truncate whitespace-nowrap overflow-hidden flex-1 min-w-0 max-w-[220px]">Download failed</span>
           </div>
         ),
         id: "download-toast",

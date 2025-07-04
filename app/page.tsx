@@ -5,7 +5,7 @@ import { VideoDownloader } from '@/components/video-downloader'
 import { Toaster } from '@/components/ui/sonner'
 
 export default function Home() {
-  const [activeTool, setActiveTool] = useState('downloader')
+  const [activeTool] = useState('downloader')
   const [showPrivacy, setShowPrivacy] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
 
@@ -29,7 +29,7 @@ export default function Home() {
         <footer className="mt-16 mb-4 text-xs text-gray-400 text-center">
           by continuing, you agree to{' '}
           <button className="underline hover:text-gray-600" onClick={() => setShowTerms(true)} type="button">
-            terms & conditions
+            terms &amp; conditions
           </button>
           {' '}and{' '}
           <button className="underline hover:text-gray-600" onClick={() => setShowPrivacy(true)} type="button">
@@ -75,7 +75,7 @@ export default function Home() {
       {showTerms && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white dark:bg-gray-900 rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto p-6">
-            <h2 className="text-xl font-bold mb-4">Terms & Conditions</h2>
+            <h2 className="text-xl font-bold mb-4">Terms &amp; Conditions</h2>
             <div className="space-y-4 text-sm">
               <p><strong>Last updated:</strong> {new Date().toLocaleDateString()}</p>
               
@@ -98,7 +98,7 @@ export default function Home() {
               • Circumventing platform restrictions</p>
               
               <p><strong>Disclaimer:</strong></p>
-              <p>This service is provided "as is" without warranties. We are not affiliated with YouTube, TikTok, or any other platform.</p>
+              <p>This service is provided &quot;as is&quot; without warranties. We are not affiliated with YouTube, TikTok, or any other platform.</p>
               
               <p><strong>Limitation of Liability:</strong></p>
               <p>We are not liable for any damages arising from the use of this service.</p>
